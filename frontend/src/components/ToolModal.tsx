@@ -1,11 +1,10 @@
 ﻿import React, { useState, useRef } from 'react';
 import type { ToolItem } from '../types/tool';
-import confetti from 'canvas-confetti';
 import axios from 'axios';
 import {
   X, UploadCloud, File, Trash2, ArrowUp, ArrowDown,
-  CheckCircle2, AlertCircle, Loader2, Download, Settings2,
-  Lock, Eye, EyeOff, Sparkles, RefreshCw
+  Check, AlertCircle, Loader2, Download,
+  Lock, Eye, EyeOff, RotateCcw
 } from 'lucide-react';
 
 interface ToolModalProps {
@@ -27,10 +26,10 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
   const [splitRange, setSplitRange] = useState('');
   const [compressLevel, setCompressLevel] = useState('medium');
   const [watermarkText, setWatermarkText] = useState('CONFIDENTIAL');
-  const [watermarkOpacity, setWatermarkOpacity] = useState(0.35);
+  const [watermarkOpacity, setWatermarkOpacity] = useState(0.3);
   const [watermarkAngle, setWatermarkAngle] = useState(45);
-  const [watermarkColor, setWatermarkColor] = useState('#EF4444');
-  const [watermarkFontSize, setWatermarkFontSize] = useState(40);
+  const [watermarkColor, setWatermarkColor] = useState('#64748B');
+  const [watermarkFontSize, setWatermarkFontSize] = useState(36);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rotateAngle, setRotateAngle] = useState(90);
@@ -72,24 +71,12 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const triggerConfetti = () => {
-    try {
-      confetti({
-        particleCount: 80,
-        spread: 70,
-        origin: { y: 0.6 }
-      });
-    } catch {
-      // Confetti fallback
-    }
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
   };
 
   const handleConvert = async () => {
     if (files.length === 0) {
-      setErrorMsg('Please select at least one file to convert.');
+      setErrorMsg('Please select a file to convert.');
       return;
     }
 
@@ -104,7 +91,7 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
     }
 
     setIsProcessing(true);
-    setProgressStatus('Uploading & Processing document...');
+    setProgressStatus('Processing document...');
     setErrorMsg(null);
 
     try {
@@ -118,7 +105,6 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
         formData.append('file', files[0]);
       }
 
-      // Append specific parameters
       if (tool.id === 'split-pdf' && splitRange.trim()) {
         formData.append('ranges', splitRange.trim());
       } else if (tool.id === 'compress-pdf') {
@@ -145,9 +131,9 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
             ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
             : 50;
           if (percent < 100) {
-            setProgressStatus(`Uploading file (${percent}%)...`);
+            setProgressStatus(`Uploading (${percent}%)...`);
           } else {
-            setProgressStatus('Running high-fidelity conversion engine...');
+            setProgressStatus('Processing...');
           }
         },
       });
@@ -169,18 +155,17 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
       setDownloadUrl(blobUrl);
       setDownloadFilename(filename);
       setResultFileSize(formatBytes(blob.size));
-      triggerConfetti();
     } catch (err: any) {
       if (err.response && err.response.data instanceof Blob) {
         const text = await err.response.data.text();
         try {
           const json = JSON.parse(text);
-          setErrorMsg(json.detail || 'An error occurred during conversion.');
+          setErrorMsg(json.detail || 'An error occurred during processing.');
         } catch {
-          setErrorMsg(text || 'An error occurred during conversion.');
+          setErrorMsg(text || 'An error occurred during processing.');
         }
       } else {
-        setErrorMsg(err.message || 'Conversion failed. Please try again.');
+        setErrorMsg(err.message || 'Processing failed. Please try again.');
       }
     } finally {
       setIsProcessing(false);
@@ -195,63 +180,59 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4 sm:p-6 transition-all">
-      <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-zinc-950/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 transition-all">
+      <div className="relative w-full max-w-xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header Bar */}
-        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
-          <div className="flex items-center space-x-3">
-            <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-500 font-bold">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                {tool.title}
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                {tool.desc}
-              </p>
-            </div>
+        <div className="px-6 py-4.5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white">
+              {tool.title}
+            </h2>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 font-normal">
+              {tool.desc}
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-5">
+          {/* SUCCESS STATE */}
           {downloadUrl ? (
-            <div className="text-center py-8 px-4 space-y-5">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-500 border border-emerald-200 dark:border-emerald-800 flex items-center justify-center mx-auto shadow-lg shadow-emerald-500/20">
-                <CheckCircle2 className="w-8 h-8" />
+            <div className="text-center py-6 px-2 space-y-4">
+              <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white flex items-center justify-center mx-auto">
+                <Check className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white">
-                  Conversion Complete!
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">
+                  File Ready
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Your file is ready for download ({resultFileSize})
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                  {downloadFilename} • {resultFileSize}
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
                 <a
                   href={downloadUrl}
                   download={downloadFilename}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-8 py-3.5 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-sm shadow-xl shadow-rose-500/25 hover:scale-102 transition-all cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 font-medium text-xs shadow-xs transition-all cursor-pointer"
                 >
                   <Download className="w-4 h-4" />
-                  <span>Download {downloadFilename}</span>
+                  <span>Download File</span>
                 </a>
                 <button
                   onClick={resetAll}
-                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-2 px-6 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold text-sm transition-all cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center space-x-1.5 px-4 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-xs transition-all cursor-pointer"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  <span>Convert Another File</span>
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Convert Another</span>
                 </button>
               </div>
             </div>
@@ -270,10 +251,10 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
                   handleFiles(e.dataTransfer.files);
                 }}
                 onClick={() => fileInputRef.current?.click()}
-                className={`relative border-2 border-dashed rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 ${
+                className={`relative border border-dashed rounded-xl p-7 text-center cursor-pointer transition-all duration-150 ${
                   isDragging
-                    ? 'border-rose-500 bg-rose-50/50 dark:bg-rose-950/20 scale-[0.99]'
-                    : 'border-slate-300 dark:border-slate-700 hover:border-rose-400 bg-slate-50/60 dark:bg-slate-900/40'
+                    ? 'border-zinc-900 dark:border-white bg-zinc-100/50 dark:bg-zinc-800/50'
+                    : 'border-zinc-300 dark:border-zinc-700 hover:border-zinc-500 bg-zinc-50/50 dark:bg-zinc-900/40'
                 }`}
               >
                 <input
@@ -284,47 +265,47 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
                   className="hidden"
                   onChange={(e) => handleFiles(e.target.files)}
                 />
-                <div className="w-14 h-14 rounded-2xl bg-rose-50 dark:bg-rose-950/80 text-rose-500 flex items-center justify-center mx-auto mb-3 shadow-inner">
-                  <UploadCloud className="w-7 h-7" />
+                <div className="w-10 h-10 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200/80 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 flex items-center justify-center mx-auto mb-2.5">
+                  <UploadCloud className="w-5 h-5" />
                 </div>
-                <p className="font-bold text-slate-800 dark:text-slate-200 text-base">
-                  {isDragging ? 'Drop your files right here' : 'Click to select or drag & drop files here'}
+                <p className="font-medium text-zinc-800 dark:text-zinc-200 text-xs">
+                  {isDragging ? 'Drop file to upload' : 'Click to select or drag and drop file'}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  Supported formats: <span className="font-mono font-bold text-slate-600 dark:text-slate-300">{tool.inputExt}</span>
+                <p className="text-[11px] text-zinc-400 mt-0.5">
+                  Supports <span className="font-mono">{tool.inputExt}</span>
                   {tool.acceptMultiple && ' • Multiple files supported'}
                 </p>
               </div>
 
-              {/* UPLOADED FILE LIST */}
+              {/* SELECTED FILES LIST */}
               {files.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 px-1">
-                    <span>Selected Files ({files.length})</span>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-medium text-zinc-500 px-0.5">
+                    <span>Selected files ({files.length})</span>
                     <button
                       onClick={resetAll}
-                      className="text-rose-500 hover:underline cursor-pointer"
+                      className="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer"
                     >
-                      Clear All
+                      Clear
                     </button>
                   </div>
-                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                  <div className="max-h-36 overflow-y-auto space-y-1 pr-0.5">
                     {files.map((file, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 text-xs"
+                        className="flex items-center justify-between p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-800 text-xs"
                       >
-                        <div className="flex items-center space-x-2.5 overflow-hidden">
-                          <File className="w-4 h-4 text-rose-500 shrink-0" />
-                          <span className="font-medium text-slate-800 dark:text-slate-200 truncate">
+                        <div className="flex items-center space-x-2 overflow-hidden">
+                          <File className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          <span className="font-medium text-zinc-800 dark:text-zinc-200 truncate">
                             {file.name}
                           </span>
-                          <span className="text-slate-400 shrink-0">
+                          <span className="text-zinc-400 shrink-0 text-[11px]">
                             ({formatBytes(file.size)})
                           </span>
                         </div>
 
-                        <div className="flex items-center space-x-1 shrink-0 ml-2">
+                        <div className="flex items-center space-x-0.5 shrink-0 ml-2">
                           {tool.acceptMultiple && (
                             <>
                               <button
@@ -333,9 +314,9 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
                                   e.stopPropagation();
                                   moveFile(idx, 'up');
                                 }}
-                                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 cursor-pointer"
+                                className="p-1 text-zinc-400 hover:text-zinc-600 disabled:opacity-30 cursor-pointer"
                               >
-                                <ArrowUp className="w-3.5 h-3.5" />
+                                <ArrowUp className="w-3 h-3" />
                               </button>
                               <button
                                 disabled={idx === files.length - 1}
@@ -343,9 +324,9 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
                                   e.stopPropagation();
                                   moveFile(idx, 'down');
                                 }}
-                                className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30 cursor-pointer"
+                                className="p-1 text-zinc-400 hover:text-zinc-600 disabled:opacity-30 cursor-pointer"
                               >
-                                <ArrowDown className="w-3.5 h-3.5" />
+                                <ArrowDown className="w-3 h-3" />
                               </button>
                             </>
                           )}
@@ -354,9 +335,9 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
                               e.stopPropagation();
                               removeFile(idx);
                             }}
-                            className="p-1 text-rose-400 hover:text-rose-600 transition-colors cursor-pointer"
+                            className="p-1 text-zinc-400 hover:text-red-500 transition-colors cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                       </div>
@@ -365,224 +346,219 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
                 </div>
               )}
 
-              {/* TOOL SPECIFIC OPTIONS ACCORDION/PANEL */}
-              <div className="p-4 rounded-2xl bg-slate-50/80 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/60 space-y-4">
-                <div className="flex items-center space-x-2 text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  <Settings2 className="w-4 h-4 text-rose-500" />
-                  <span>Conversion Settings</span>
-                </div>
-
-                {tool.id === 'split-pdf' && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Page Ranges (optional, e.g. &quot;1-3, 5, 7-9&quot; or leave blank to split every page)
-                    </label>
-                    <input
-                      type="text"
-                      value={splitRange}
-                      onChange={(e) => setSplitRange(e.target.value)}
-                      placeholder="e.g. 1-2, 4-6"
-                      className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-rose-500"
-                    />
-                  </div>
-                )}
-
-                {tool.id === 'compress-pdf' && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Compression Level
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'medium', label: 'Recommended', desc: 'Good quality, good compression' },
-                        { id: 'high', label: 'Extreme', desc: 'Less quality, high compression' }
-                      ].map((lvl) => (
-                        <button
-                          key={lvl.id}
-                          type="button"
-                          onClick={() => setCompressLevel(lvl.id)}
-                          className={`p-2.5 text-left rounded-xl border text-xs transition-all cursor-pointer ${
-                            compressLevel === lvl.id
-                              ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300 font-bold'
-                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400'
-                          }`}
-                        >
-                          <div className="font-bold">{lvl.label}</div>
-                          <div className="text-[10px] opacity-75">{lvl.desc}</div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {tool.id === 'watermark-pdf' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* TOOL SPECIFIC OPTIONS */}
+              {['split-pdf', 'compress-pdf', 'watermark-pdf', 'protect-pdf', 'unlock-pdf', 'rotate-pdf', 'pdf-to-images'].includes(tool.id) && (
+                <div className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 space-y-3">
+                  
+                  {/* Split PDF */}
+                  {tool.id === 'split-pdf' && (
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Watermark Text
+                      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        Page Ranges (optional, e.g. 1-3, 5, 7-9 or leave blank to split every page)
                       </label>
                       <input
                         type="text"
-                        value={watermarkText}
-                        onChange={(e) => setWatermarkText(e.target.value)}
-                        placeholder="CONFIDENTIAL"
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-rose-500"
+                        value={splitRange}
+                        onChange={(e) => setSplitRange(e.target.value)}
+                        placeholder="e.g. 1-2, 4-6"
+                        className="w-full px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-900 dark:focus:ring-white"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Font Size ({watermarkFontSize}px)
+                  )}
+
+                  {/* Compress PDF */}
+                  {tool.id === 'compress-pdf' && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        Compression Level
                       </label>
-                      <input
-                        type="number"
-                        min="12"
-                        max="96"
-                        value={watermarkFontSize}
-                        onChange={(e) => setWatermarkFontSize(Number(e.target.value))}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-rose-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Rotation Angle ({watermarkAngle}°)
-                      </label>
-                      <select
-                        value={watermarkAngle}
-                        onChange={(e) => setWatermarkAngle(Number(e.target.value))}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                      >
-                        <option value={0}>0° (Horizontal)</option>
-                        <option value={45}>45° (Diagonal)</option>
-                        <option value={90}>90° (Vertical)</option>
-                      </select>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Opacity ({Math.round(watermarkOpacity * 100)}%)
-                      </label>
-                      <input
-                        type="range"
-                        min="0.1"
-                        max="0.9"
-                        step="0.05"
-                        value={watermarkOpacity}
-                        onChange={(e) => setWatermarkOpacity(parseFloat(e.target.value))}
-                        className="w-full accent-rose-500 cursor-pointer"
-                      />
-                    </div>
-                    <div className="space-y-1 sm:col-span-2">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Color
-                      </label>
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="color"
-                          value={watermarkColor}
-                          onChange={(e) => setWatermarkColor(e.target.value)}
-                          className="w-8 h-8 rounded-lg cursor-pointer border-0 bg-transparent"
-                        />
-                        <span className="text-xs font-mono text-slate-500">{watermarkColor}</span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'medium', label: 'Balanced', desc: 'Standard compression' },
+                          { id: 'high', label: 'High', desc: 'Maximum size reduction' }
+                        ].map((lvl) => (
+                          <button
+                            key={lvl.id}
+                            type="button"
+                            onClick={() => setCompressLevel(lvl.id)}
+                            className={`p-2 text-left rounded-lg border text-xs transition-all cursor-pointer ${
+                              compressLevel === lvl.id
+                                ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900 font-medium'
+                                : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400'
+                            }`}
+                          >
+                            <div>{lvl.label}</div>
+                            <div className="text-[10px] opacity-70">{lvl.desc}</div>
+                          </button>
+                        ))}
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {(tool.id === 'protect-pdf' || tool.id === 'unlock-pdf') && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center space-x-1">
-                      <Lock className="w-3.5 h-3.5 text-rose-500" />
-                      <span>{tool.id === 'protect-pdf' ? 'Set Document Password' : 'Enter Password to Decrypt'}</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter password..."
-                        className="w-full pl-3 pr-10 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-rose-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {tool.id === 'rotate-pdf' && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      Rotate Clockwise
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[90, 180, 270].map((deg) => (
-                        <button
-                          key={deg}
-                          type="button"
-                          onClick={() => setRotateAngle(deg)}
-                          className={`py-2 text-center rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                            rotateAngle === deg
-                              ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-300'
-                              : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-600'
-                          }`}
+                  {/* Watermark PDF */}
+                  {tool.id === 'watermark-pdf' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Watermark Text
+                        </label>
+                        <input
+                          type="text"
+                          value={watermarkText}
+                          onChange={(e) => setWatermarkText(e.target.value)}
+                          placeholder="CONFIDENTIAL"
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Font Size ({watermarkFontSize}px)
+                        </label>
+                        <input
+                          type="number"
+                          min="12"
+                          max="96"
+                          value={watermarkFontSize}
+                          onChange={(e) => setWatermarkFontSize(Number(e.target.value))}
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Rotation ({watermarkAngle}°)
+                        </label>
+                        <select
+                          value={watermarkAngle}
+                          onChange={(e) => setWatermarkAngle(Number(e.target.value))}
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
                         >
-                          +{deg}°
+                          <option value={0}>Horizontal (0°)</option>
+                          <option value={45}>Diagonal (45°)</option>
+                          <option value={90}>Vertical (90°)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Opacity ({Math.round(watermarkOpacity * 100)}%)
+                        </label>
+                        <input
+                          type="range"
+                          min="0.1"
+                          max="0.9"
+                          step="0.05"
+                          value={watermarkOpacity}
+                          onChange={(e) => setWatermarkOpacity(parseFloat(e.target.value))}
+                          className="w-full accent-zinc-900 dark:accent-white cursor-pointer"
+                        />
+                      </div>
+                      <div className="space-y-1 sm:col-span-2">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Color
+                        </label>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="color"
+                            value={watermarkColor}
+                            onChange={(e) => setWatermarkColor(e.target.value)}
+                            className="w-6 h-6 rounded cursor-pointer border-0 bg-transparent"
+                          />
+                          <span className="text-xs font-mono text-zinc-500">{watermarkColor}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Password Protect / Unlock */}
+                  {(tool.id === 'protect-pdf' || tool.id === 'unlock-pdf') && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 flex items-center space-x-1">
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>{tool.id === 'protect-pdf' ? 'Set Password' : 'Enter Password to Decrypt'}</span>
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Password..."
+                          className="w-full pl-3 pr-9 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-1 focus:ring-zinc-900"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                        >
+                          {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                         </button>
-                      ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
-                {tool.id === 'pdf-to-images' && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Image Format
+                  {/* Rotate PDF */}
+                  {tool.id === 'rotate-pdf' && (
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        Clockwise Rotation
                       </label>
-                      <select
-                        value={imageFormat}
-                        onChange={(e) => setImageFormat(e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                      >
-                        <option value="png">PNG (Lossless)</option>
-                        <option value="jpeg">JPG (Standard)</option>
-                      </select>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[90, 180, 270].map((deg) => (
+                          <button
+                            key={deg}
+                            type="button"
+                            onClick={() => setRotateAngle(deg)}
+                            className={`py-1.5 text-center rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                              rotateAngle === deg
+                                ? 'border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900'
+                                : 'border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-600'
+                            }`}
+                          >
+                            +{deg}°
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                        Resolution (DPI)
-                      </label>
-                      <select
-                        value={imageDpi}
-                        onChange={(e) => setImageDpi(Number(e.target.value))}
-                        className="w-full px-3 py-2 text-xs rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 cursor-pointer"
-                      >
-                        <option value={72}>72 DPI (Web/Low)</option>
-                        <option value={150}>150 DPI (Standard)</option>
-                        <option value={300}>300 DPI (High Print)</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {!['split-pdf', 'compress-pdf', 'watermark-pdf', 'protect-pdf', 'unlock-pdf', 'rotate-pdf', 'pdf-to-images'].includes(tool.id) && (
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    High fidelity rendering enabled. Layouts, typography, images, and tables will be converted automatically.
-                  </p>
-                )}
-              </div>
+                  {/* PDF to Images */}
+                  {tool.id === 'pdf-to-images' && (
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Format
+                        </label>
+                        <select
+                          value={imageFormat}
+                          onChange={(e) => setImageFormat(e.target.value)}
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                        >
+                          <option value="png">PNG (Lossless)</option>
+                          <option value="jpeg">JPG</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Resolution (DPI)
+                        </label>
+                        <select
+                          value={imageDpi}
+                          onChange={(e) => setImageDpi(Number(e.target.value))}
+                          className="w-full px-2.5 py-1.5 text-xs rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                        >
+                          <option value={150}>150 DPI (Standard)</option>
+                          <option value={300}>300 DPI (High Resolution)</option>
+                          <option value={72}>72 DPI (Web)</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Error Banner */}
               {errorMsg && (
-                <div className="p-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-900/60 flex items-start space-x-2.5 text-rose-600 dark:text-rose-400 text-xs">
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 flex items-start space-x-2 text-red-600 dark:text-red-400 text-xs">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="font-bold">Conversion Error</div>
-                    <div>{errorMsg}</div>
-                  </div>
+                  <div>{errorMsg}</div>
                 </div>
               )}
 
@@ -590,17 +566,15 @@ export const ToolModal: React.FC<ToolModalProps> = ({ tool, onClose }) => {
               <button
                 disabled={files.length === 0 || isProcessing}
                 onClick={handleConvert}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-rose-600 via-red-500 to-amber-500 hover:from-rose-500 hover:to-amber-400 disabled:opacity-50 disabled:pointer-events-none text-white font-bold text-sm shadow-xl shadow-rose-500/25 flex items-center justify-center space-x-2 transition-all cursor-pointer"
+                className="w-full py-2.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100 disabled:opacity-40 disabled:pointer-events-none text-white font-medium text-xs shadow-xs flex items-center justify-center space-x-2 transition-all cursor-pointer"
               >
                 {isProcessing ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>{progressStatus}</span>
                   </>
                 ) : (
-                  <>
-                    <span>Start {tool.title}</span>
-                  </>
+                  <span>Convert & Process</span>
                 )}
               </button>
             </>

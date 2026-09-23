@@ -52,7 +52,7 @@ export function App() {
   }, [activeCategory, searchQuery]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 transition-colors">
+    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 transition-colors">
       <Header
         darkMode={darkMode}
         setDarkMode={setDarkMode}
@@ -71,8 +71,6 @@ export function App() {
 
         <ToolGrid
           tools={filteredTools}
-          activeCategory={activeCategory}
-          searchQuery={searchQuery}
           onSelectTool={(tool) => setSelectedTool(tool)}
         />
       </main>
